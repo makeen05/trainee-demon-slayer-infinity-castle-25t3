@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
+import { Link } from 'react-router-dom';
 
 function LandingPage() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -40,12 +41,14 @@ function LandingPage() {
                 </div>
             </div>
             {/* Floating Upload Button - Bottom Right */}
-            <button 
-                className="fixed bottom-8 right-8 w-30 h-30 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 flex items-center justify-center text-2xl"
-                aria-label="Upload Resource"
-            >
-                Upload Resource
-            </button>
+            <Link to="/add-resource">
+                <button 
+                    className="fixed bottom-8 right-8 w-30 h-30 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 flex items-center justify-center text-2xl"
+                    aria-label="Upload Resource"
+                >
+                    Upload Resource
+                </button>
+            </Link>
         </div>
     );
     }

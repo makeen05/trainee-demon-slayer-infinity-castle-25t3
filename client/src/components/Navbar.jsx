@@ -1,3 +1,6 @@
+// client/src/components/Navbar.jsx
+import { Link } from 'react-router-dom'; // 1. Import Link
+
 function Navbar() {
     return (
         <nav className="bg-white shadow-sm">
@@ -7,12 +10,21 @@ function Navbar() {
                 </span>
 
                 <div className="flex gap-4">
-                    <button className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors">
+                    {/* 3. Changed Button to Link pointing to /signin */}
+                    <Link 
+                        to="/signin" 
+                        className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+                    >
                         Sign In
-                    </button>
-                    <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
+                    </Link>
+
+                    {/* 4. Changed Button to Link pointing to /signup */}
+                    <Link 
+                        to="/signup" 
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                    >
                         Sign Up
-                    </button>
+                    </Link>
                 </div>
             </div>
         </nav>
