@@ -74,7 +74,7 @@ const ResourceSchema = new mongoose.Schema({
   }
 });
 
-// Create geospatial index for location-based queries?
+// Create geospatial index for location-based queries
 ResourceSchema.index({ location: '2dsphere' });
 
 export default mongoose.model('Resource', ResourceSchema);
