@@ -33,7 +33,7 @@ function SignUp() {
 
     if (result.success) {
       console.log('Account created successfully!');
-      navigate('/map'); // Redirect to map after successful registration
+      navigate('/'); // Redirect to home after successful registration
     } else {
       setError(result.error);
     }

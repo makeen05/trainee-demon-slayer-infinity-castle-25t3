@@ -32,7 +32,7 @@ function SignIn() {
 
     if (result.success) {
       console.log('Logged in successfully!');
-      navigate('/map'); // Redirect to map after successful login
+      navigate('/'); // Redirect to map after successful login
     } else {
       setError(result.error);
     }
