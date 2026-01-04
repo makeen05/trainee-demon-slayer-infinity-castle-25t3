@@ -41,6 +41,11 @@ export const getAllResources = async () => {
   return response.data;
 };
 
+export const searchResources = async (params) => {
+  const response = await api.get('/resources/search', { params });
+  return response.data;
+};
+
 export const getResourceById = async (id) => {
   const response = await api.get(`/resources/${id}`);
   return response.data;
