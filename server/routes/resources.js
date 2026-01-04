@@ -4,6 +4,58 @@ import { verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// @route   GET /api/resources/search
+// @desc    Search resources by name, type, or location
+// @access  Public
+router.get('/search', async (req, res) => {
+  const { q, lat, lng } = req.query;
+
+  try {
+    let query = {};
+
+    // Filter by name or type
+    if (q) {
+      // Get rid of special regex characters to prevent errors
+      const safeQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.$or = [
+        { name: { $regex: safeQ, $options: 'i' } }, // not case sensitive
+        { type: { $regex: safeQ, $options: 'i' } }
+      ];
+    }
+
+    // If have user coords, filter by nearest location using mongo's near operator
+    if (lat && lng) {
+      const latNum = parseFloat(lat);
+      const lngNum = parseFloat(lng);
+
+      // Only add location filter if coordinates are valid numbers
+      if (!isNaN(latNum) && !isNaN(lngNum)) {
+        query.location = {
+          $near: {
+            $geometry: {
+              type: "Point",
+              coordinates: [lngNum, latNum]
+            },
+            $maxDistance: 5000 // 5km search radius
+          }
+        };
+      }
+    }
+
+    const resources = await Resource.find(query).limit(20);
+    res.json(resources);
+  } catch (error) {
+    console.error('Search error:', error);
+    
+    // Check if the error is due to missing index
+    if (error.message && error.message.includes('unable to find index for $geoNear')) {
+        return res.status(500).json({ error: 'Database index missing. Please restart the server to build the index.' });
+    }
+    
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // @route   GET /api/resources
 // @desc    Get all resources
 // @access  Public

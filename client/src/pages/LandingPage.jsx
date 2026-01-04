@@ -1,16 +1,35 @@
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 function LandingPage() {
     const [selectedType, setSelectedType] = useState('');
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleSearch = (e) => {
         e.preventDefault();
-        if (selectedType) {
-            console.log('Searching for:', selectedType);
-            // TODO: Navigate to map with filter or implement search
-            // navigate(`/map?type=${selectedType}`);
+        if (!selectedType) return;
+
+        setLoading(true);   
+
+        // get user's location to send to map
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    // if location allowed,  we navigate to the map
+                    navigate(`/map?type=${encodeURIComponent(selectedType)}&lat=${latitude}&lng=${longitude}`);
+                },
+                (error) => {
+                    console.error("Geolocation error:", error);
+                    alert("Could not get your location. Showing default map view.");
+                    navigate(`/map?type=${encodeURIComponent(selectedType)}`);
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser.");
+            navigate(`/map?type=${encodeURIComponent(selectedType)}`);
         }
     };
 
@@ -49,10 +68,10 @@ function LandingPage() {
 
                             <button
                                 type="submit"
-                                className="px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={!selectedType}
+                                className="px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                disabled={!selectedType || loading}
                             >
-                                Find
+                                {loading ? 'Locating...' : 'Find'}
                             </button>
                         </div>
 
