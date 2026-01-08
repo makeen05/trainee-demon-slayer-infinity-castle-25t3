@@ -25,6 +25,11 @@ function LandingPage() {
                     console.error("Geolocation error:", error);
                     alert("Could not get your location. Showing default map view.");
                     navigate(`/map?type=${encodeURIComponent(selectedType)}`);
+                },
+                {
+                    enableHighAccuracy: false, // Use wifi location (faster) instead of GPS
+                    timeout: 5000,             // Fail after 5 seconds
+                    maximumAge: Infinity       // Use cached location if available
                 }
             );
         } else {
