@@ -66,4 +66,9 @@ export const deleteResource = async (id) => {
   return response.data;
 };
 
+export const rateResource = async (id, rating) => {
+  const response = await api.post(`/resources/${id}/rate`, { rating });
+  return response.data;
+};
+
 export default api;

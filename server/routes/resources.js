@@ -192,4 +192,43 @@ router.delete('/:id', verifyToken, async (req, res) => {
   }
 });
 
+// @route   POST /api/resources/:id/rate
+// @desc    Rate a resource
+// @access  Private
+router.post('/:id/rate', verifyToken, async (req, res) => {
+  try {
+    const { rating } = req.body;
+    const resource = await Resource.findById(req.params.id);
+
+    if (!resource) {
+      return res.status(404).json({ error: 'Resource not found' });
+    }
+
+    // Check if user already rated
+    const alreadyRated = resource.ratings.find(
+      r => r.user.toString() === req.user.userId
+    );
+
+    if (alreadyRated) {
+      return res.status(400).json({ error: 'You have already rated this resource' });
+    }
+
+    resource.ratings.push({
+      user: req.user.userId,
+      rating
+    });
+
+    // Calculate average rating
+    const total = resource.ratings.reduce((acc, item) => item.rating + acc, 0);
+    resource.averageRating = total / resource.ratings.length;
+
+    await resource.save();
+
+    res.json(resource);
+  } catch (error) {
+    console.error('Rate resource error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { searchResources } from '../utils/api';
+import { searchResources, rateResource } from '../utils/api';
 import Navbar from '../components/Navbar';
 import L from 'leaflet';
 
@@ -28,6 +28,73 @@ function MapUpdater({ center, zoom }) {
   return null;
 }
 
+// Popup to handle rating state
+function ResourcePopup({ resource, onRatingUpdate }) {
+  const [rating, setRating] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleRate = async (value) => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const updatedResource = await rateResource(resource._id, value);
+      onRatingUpdate(updatedResource);
+      alert('Rating submitted!');
+    } catch (err) {
+      if (err.response && err.response.status === 400) {
+        setError("You've already rated this.");
+      } else if (err.response && err.response.status === 401) {
+        setError("Please login to rate.");
+      } else {
+        setError("Failed to submit rating.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-w-[200px]">
+      <h3 className="font-bold text-lg">{resource.name}</h3>
+      <p className="text-sm text-gray-600 mb-1">{resource.building} • Floor {resource.floor}</p>
+      <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded mb-2">
+          {resource.type}
+      </span>
+      <p className="text-sm mb-2">{resource.description}</p>
+      
+      {/* Average Rating Display */}
+      {resource.averageRating > 0 ? (
+          <div className="flex items-center text-yellow-500 mb-2">
+              <span className="text-lg mr-1">{resource.averageRating.toFixed(1)}</span>
+              {'★'}
+              <span className="text-gray-400 text-xs ml-1">({resource.ratings.length} reviews)</span>
+          </div>
+      ) : (
+        <p className="text-xs text-gray-500 mb-2">No ratings yet</p>
+      )}
+
+      {/* Rater Input */}
+      <div className="border-t pt-2 mt-2">
+        <p className="text-xs font-bold text-gray-500 mb-1">Rate this resource:</p>
+        <div className="flex gap-1 mb-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              onClick={() => handleRate(star)}
+              disabled={submitting}
+              className={`text-lg hover:scale-110 transition-transform ${submitting ? 'opacity-50' : 'hover:text-yellow-500 text-gray-300'}`}
+            >
+              ★
+            </button>
+          ))}
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
 function Map() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [resources, setResources] = useState([]);
@@ -47,6 +114,12 @@ function Map() {
     };
 
     // calls backend search api using resource type and user position
+    const handleRatingUpdate = (updatedResource) => {
+        setResources(prevResources => 
+            prevResources.map(r => r._id === updatedResource._id ? updatedResource : r)
+        );
+    };
+
     useEffect(() => {
         const fetchResources = async () => {
             setLoading(true);
@@ -124,20 +197,10 @@ function Map() {
                             position={[resource.location.coordinates[1], resource.location.coordinates[0]]}
                         >
                             <Popup>
-                                <div className="min-w-[200px]">
-                                    <h3 className="font-bold text-lg">{resource.name}</h3>
-                                    <p className="text-sm text-gray-600 mb-1">{resource.building} • Floor {resource.floor}</p>
-                                    <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded mb-2">
-                                        {resource.type}
-                                    </span>
-                                    <p className="text-sm mb-2">{resource.description}</p>
-                                    {resource.averageRating > 0 && (
-                                        <div className="flex items-center text-yellow-500">
-                                            {'★'.repeat(Math.round(resource.averageRating))}
-                                            <span className="text-gray-400 text-xs ml-1">({resource.ratings.length})</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <ResourcePopup 
+                                    resource={resource} 
+                                    onRatingUpdate={handleRatingUpdate} 
+                                />
                             </Popup>
                         </Marker>
                     ))}
