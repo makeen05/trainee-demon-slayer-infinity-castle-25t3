@@ -3,7 +3,7 @@ import axios from 'axios';
 // Use environment variable in production, proxy in development
 const api = axios.create({
   baseURL: import.meta.env.PROD 
-    ? 'https://trainee-demon-slayer-infinity-castle-25t3-production.up.railway.app/'  // Replace with your Railway URL
+    ? 'https://trainee-demon-slayer-infinity-castle-25t3-production.up.railway.app/api'  // Replace with your Railway URL
     : '/api',
   headers: {
     'Content-Type': 'application/json'
