@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { searchResources, rateResource } from '../utils/api';
 import Navbar from '../components/Navbar';
@@ -19,6 +19,23 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Custom RED CIRCLE icon for user location
+const UserLocationIcon = L.divIcon({
+  className: 'custom-user-marker',
+  html: `
+    <div style="
+      width: 20px;
+      height: 20px;
+      background-color: #325aed;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    "></div>
+  `,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
+});
+
 // Component to update map view e.g when we do show all we change the map view to UNSW
 function MapUpdater({ center, zoom }) {
   const map = useMap();
@@ -28,8 +45,24 @@ function MapUpdater({ center, zoom }) {
   return null;
 }
 
-// Popup to handle rating state
-function ResourcePopup({ resource, onRatingUpdate }) {
+// Helper function to calculate distance between two points in meters
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c; // Distance in meters
+}
+
+// Popup to handle rating state and directions
+function ResourcePopup({ resource, userLocation, onRatingUpdate, onShowDirections }) {
   const [rating, setRating] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -54,6 +87,16 @@ function ResourcePopup({ resource, onRatingUpdate }) {
     }
   };
 
+  // Calculate distance if user location is available
+  const distance = userLocation 
+    ? calculateDistance(
+        userLocation.lat, 
+        userLocation.lng, 
+        resource.location.coordinates[1], 
+        resource.location.coordinates[0]
+      )
+    : null;
+
   return (
     <div className="min-w-[200px]">
       <h3 className="font-bold text-lg">{resource.name}</h3>
@@ -63,6 +106,15 @@ function ResourcePopup({ resource, onRatingUpdate }) {
       </span>
       <p className="text-sm mb-2">{resource.description}</p>
       
+      {/* Distance Display */}
+      {distance !== null && (
+        <p className="text-xs text-gray-500 mb-2">
+          📍 {distance < 1000 
+            ? `${Math.round(distance)}m away` 
+            : `${(distance / 1000).toFixed(1)}km away`}
+        </p>
+      )}
+
       {/* Average Rating Display */}
       {resource.averageRating > 0 ? (
           <div className="flex items-center text-yellow-500 mb-2">
@@ -72,6 +124,16 @@ function ResourcePopup({ resource, onRatingUpdate }) {
           </div>
       ) : (
         <p className="text-xs text-gray-500 mb-2">No ratings yet</p>
+      )}
+
+      {/* Directions Button */}
+      {userLocation && (
+        <button
+          onClick={() => onShowDirections(resource)}
+          className="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded mb-2 hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+        >
+          🧭 Get Directions
+        </button>
       )}
 
       {/* Rater Input */}
@@ -100,10 +162,13 @@ function Map() {
     const [resources, setResources] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [directionsTo, setDirectionsTo] = useState(null);
 
     const lat = parseFloat(searchParams.get('lat')) || -33.9173; // Default is UNSW
     const lng = parseFloat(searchParams.get('lng')) || 151.2313;
     const type = searchParams.get('type');
+
+    const userLocation = searchParams.get('lat') ? { lat, lng } : null;
 
     const handleShowAll = () => {
         // Remove lat/lng from search params for all locations
@@ -111,6 +176,18 @@ function Map() {
         newParams.delete('lat');
         newParams.delete('lng');
         setSearchParams(newParams);
+    };
+
+    const handleShowDirections = (resource) => {
+        if (!userLocation) {
+            alert('Your location is not available');
+            return;
+        }
+        setDirectionsTo(resource);
+    };
+
+    const handleClearDirections = () => {
+        setDirectionsTo(null);
     };
 
     // calls backend search api using resource type and user position
@@ -174,6 +251,21 @@ function Map() {
                     </div>
                 )}
 
+                {/* Clear Directions Button */}
+                {directionsTo && (
+                    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded shadow-lg flex items-center gap-3">
+                        <p className="font-semibold">
+                            🧭 Directions to {directionsTo.name}
+                        </p>
+                        <button 
+                            onClick={handleClearDirections}
+                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                )}
+
                 <MapContainer center={[lat, lng]} zoom={15} style={{ height: "100%", width: "100%" }}>
                     <MapUpdater center={[lat, lng]} zoom={15} />
                     <TileLayer
@@ -181,11 +273,11 @@ function Map() {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
 
-                    {/* User Location Marker (if available) */}
-                    {searchParams.get('lat') && (
-                        <Marker position={[lat, lng]}>
+                    {/* User Location Marker (RED CIRCLE) */}
+                    {userLocation && (
+                        <Marker position={[lat, lng]} icon={UserLocationIcon}>
                             <Popup>
-                                <strong>You are here</strong>
+                                <strong>📍 You are here</strong>
                             </Popup>
                         </Marker>
                     )}
@@ -199,11 +291,27 @@ function Map() {
                             <Popup>
                                 <ResourcePopup 
                                     resource={resource} 
-                                    onRatingUpdate={handleRatingUpdate} 
+                                    userLocation={userLocation}
+                                    onRatingUpdate={handleRatingUpdate}
+                                    onShowDirections={handleShowDirections}
                                 />
                             </Popup>
                         </Marker>
                     ))}
+
+                    {/* Directions Line (Green with Arrow) */}
+                    {directionsTo && userLocation && (
+                        <Polyline
+                            positions={[
+                                [lat, lng],
+                                [directionsTo.location.coordinates[1], directionsTo.location.coordinates[0]]
+                            ]}
+                            color="black"
+                            weight={4}
+                            dashArray="10, 10"
+                            lineCap="round"
+                        />
+                    )}
                 </MapContainer>
 
                 {/* Floating Add Button */}

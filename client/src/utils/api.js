@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-// Create axios instance with base config
+// Use environment variable in production, proxy in development
 const api = axios.create({
-  baseURL: '/api', // Vite proxy will redirect to http://localhost:5001/api
+  baseURL: import.meta.env.PROD 
+    ? 'https://trainee-demon-slayer-infinity-castle-25t3-production.up.railway.app/'  // Replace with your Railway URL
+    : '/api',
   headers: {
     'Content-Type': 'application/json'
   }
